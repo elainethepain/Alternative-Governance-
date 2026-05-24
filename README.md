@@ -1,73 +1,87 @@
 
+# Civic Coordination Protocol
 
-## 🎉 Welcome to Your Community-First UBI Toolkit!
+This protocol provides a set of smart-contract programs and supporting libraries for communities that want to run a universal basic income (UBI) system with transparent governance.
 
-Built for close-knit circles, local clubs, or community cooperatives, you’re here because you believe in fairness, transparency, and inclusive governance. Here's how this toolkit helps your community run your own UBI system, democratically and reliably:
+Built on Solana using Anchor, the system combines trust-based identity verification with programmable governance and coordination mechanisms for digitally native communities and cooperative structures.
 
----
+Modules provided include identity verification, councils, referenda, reputation graphs, civic participation incentives, UBI distribution, and community-directed resource allocation.
 
-### 🗳️ Customizable Voting Tokens & Governance Rules
+### Modules
 
-* **Tailored tokens**: Create adjustable voting tokens just right for your group.
-* **Configure thresholds**: Set support and quorum levels so every decision matches your group's expectations.
-* **Flexible timelines**: Define voting phases with start dates and durations that fit your pace and culture.
-  These settings offer the freedom to shape governance that aligns with your tokenomics and demographics.
+| Module | Description |
+| --- | --- |
+| `lib/accounts/elections` | Account structures for governance systems including councils, voting periods, election cycles, and community preference tracking. |
+| `lib/accounts/trust-networks` | Identity and trust infrastructure for managing verified participants, reputation relationships, wallet links, and trust-based participation rules. |
+### Programs
 
----
+- **`census`** – placeholder initialization for maintaining census information.
+- **`elections`** – (imported as a submodule) implements council elections and preference pooling.
+- **`referenda`** – records proposals and referendum outcomes.
+- **`sampling`** – supports random sampling of members (e.g., for juries or committees).
+- **`solana-ubi`** – mints and distributes UBI tokens on a schedule, integrating with the trust network to prevent duplicate claims.
+- **`solana-fundraisers`** and **`solana-petition`** – allow fundraising campaigns and petition management.
+- **`trust-networks`** – on-chain logic for building and updating the trust graph.
 
-### 📂 Proposal Management—All Trails Tracked
+## Governance & elections
 
-* **Submit with ease**: Let members propose ideas or initiatives whenever inspiration strikes.
-* **Track transparently**: Watch as proposals move through discussion, voting, and execution—all in one space.
-* **Seamless lifecycle**: From proposal idea → vote → outcome, every step is clear and well‑tracked.
+### Councils and election periods
 
----
+The `Council` account defines a governance period with the following fields:
 
-### 👥 Voter Authentication & Openness
+- `period` – identifies the election cycle.
+- `period_start` – Unix timestamp marking when the period begins.
+- `campaign_days` / `period_days` – lengths (in days) of the campaign phase and the total governance period. Communities can adjust these values to create short voting windows or extended deliberation periods.
+- `composition` and `size` – store the list of elected members and the size of the council.
+- `status` – enumerated as `CAMPAIGN`, `TALLY` or `ACTIVE` to indicate whether a council is accepting nominations, tallying votes or serving.
 
-* **Secure access**: Require wallet-based login to verify identity before voting.
-* **On-chain votes**: Every vote is logged publicly on-chain, so anyone can audit or verify results.
-* **Full transparency**: Build trust with everyone by making votes immutably visible—yet preserving privacy at individual level.
+These fields expose the "flexible timelines" and governance phase. By modifying `campaign_days` and `period_days` the community can run daily, weekly or monthly voting rounds.
 
----
+### Preference pools and opinions
 
-### ⚙️ Rules You Can Adapt
+For preferential or quadratic voting, the `PreferencePool` account stores a map of opinions for each voter ID. Each `Opinion` records bonuses and maluses so that votes can include positive and negative weightings. The pool is keyed by the election period and can be reset each cycle. This design provides transparent tracking of proposals through discussion, voting and execution.
 
-* **Quorum settings**: Choose how many members need to participate before a vote counts.
-* **Support thresholds**: Decide what percentage is required to pass a proposal.
-* **Timeline control**: Set how long discussions and voting last—daily, weekly, biweekly—you decide.
-  This lets you run whichever democratic model suits your values and operations best.
+## Trust networks & identity
 
----
+### Identity accounts
 
-## 🚀 Why This Toolkit?
+The system prevents Sybil attacks by giving each participant a unique identity and requiring them to gain trust from others before voting. Key structures include:
 
-* **Empower your members**—everyone can create, discuss, and vote with full clarity.
-* **Remove gatekeepers**—no top-down rules. Your small community rules together.
-* **Build trust**—all votes and proposals are visible and auditable.
-* **Adaptable and inclusive**—governance that honors your group's principles and diversity.
+- `TrustList` – holds a vector of assigned identity numbers and the next available ID.
+- `Trust` – stores parameters governing trust requirements (`req`) and counts of current trustees (`trustees`).
+- `Trustable` – represents an individual user, storing their ID, username, full name, birthday timestamp and lists of IDs they trust or are trusted by. Flags indicate whether they are currently trusted and whether their account is locked.
+- `PkLink` – binds an identity to a Solana wallet public key.
+- `SimilarIDs` – keeps track of potentially duplicate IDs to help with identity resolution.
 
----
+### Trust management functions
 
-## 🔧 How to Get Started
+`lib/shared` includes core algorithms for managing trust:
 
-1. Customize your token and governance settings.
-2. Invite members to submit proposals.
-3. Open your voting period.
-4. Let votes be cast and counted transparently on chain.
-5. Execute approved proposals—automatically or manually, based on your setups.
+- `break_trust_fn` – takes two `Trustable` accounts and removes the trust relationship between them. It also decrements the total trustee count and clears the trusted flag if the user no longer meets the cutoff. This function enforces negative trust actions (e.g., revoking endorsements).
+- `butcher` – normalizes a name by stripping diacritics and non-ASCII characters, lowercasing and sorting characters. Such normalization can be used when comparing usernames or generating deterministic identity hashes.
+- `cutoff` – computes the minimum number of trustees required for someone to be considered trusted (`max(0, req)` clamped to the number of trustees).
+- `report_threshold` – calculates how many reports are needed to trigger further action based on the number of trustees.
 
----
+These functions demonstrate how quorum and support thresholds are enforced in code.
 
-## 🌱 Built for Community Flourishing
+## Getting started
 
-Much like innovative UBI-like plugins and DAOs emerging in Web3 today, this toolkit is democratic, anti-Sybil, and easy to use. Platforms like UBI built on Proof of Humanity have paved the way—verifying humans, preventing vote fraud, and using **quadratic voting** to ensure balance.
-It’s the perfect foundation for small groups to launch UBI governance with transparency and fairness.
+1. **Install prerequisites** – ensure you have Rust, Anchor, the Solana CLI and Node.js installed.
+2. **Clone the repository and its submodules** – run:
 
----
+   ```bash
+   git clone --recurse-submodules https://github.com/your-username/ubi-proposal-2025.git
+   cd ubi-proposal-2025
+   ```
 
-Ready to step into self-governance and grassroots UBI distribution?
-Let’s make democracy fun, fair, and fully in your community’s control!
+3. **Build the on-chain programs** – run `anchor build` in each program directory (`programs/census`, `programs/trust-networks`, etc.) to compile the smart contracts.
+4. **Deploy to a local or testnet cluster** – configure your Solana CLI to point to devnet or localnet and run `anchor deploy` for each program.
+5. **Run the frontend** – the `app` directory contains a Next.js application. Install dependencies with `npm install` (or `pnpm install`) and start the development server with `npm run dev`.
 
+## Contributing
 
+We welcome contributions from anyone interested in advancing alternative economic and democratic systems. You can open issues for bugs or feature requests, submit pull requests or improve the documentation.
 
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
